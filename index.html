@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="mk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Flyly: најди летови од Скопје.">
+<style>*,*::before,*::after{box-sizing:border-box}body{margin:0;overflow-x:hidden}[hidden]{display:none!important}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+<title>Flyly</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Manrope:wght@400;500;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: one purple field, a single chat column centered; the prompt sits inside the input and the answers stack above it. */
+:root {
+  --purple: #4b1f8f;
+  --purple-deep: #2c1060;
+  --glow: #8f5cff;
+  --panel: #f7f3ff;
+  --ink: #1d1033;
+  --muted: #6b5a8a;
+  --line: #e3d9f7;
+  --sun: #ffcf4a;
+  --display: "Unbounded", "Arial Black", system-ui, sans-serif;
+  --body: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  background: radial-gradient(1200px 700px at 50% 30%, var(--glow) 0%, var(--purple) 45%, var(--purple-deep) 100%) fixed, var(--purple);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 15px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0;
+  display: flex;
+  flex-direction: column;
+}
+/* Glowing orbs drifting behind everything */
+body::before, body::after {
+  content: ""; position: fixed; z-index: 0; pointer-events: none;
+  width: 70vmax; height: 70vmax; border-radius: 50%; filter: blur(60px);
+}
+body::before {
+  left: -20vmax; top: -25vmax;
+  background: radial-gradient(circle, rgba(196, 120, 255, .85) 0%, rgba(143, 92, 255, .35) 40%, transparent 70%);
+  animation: drift1 14s ease-in-out infinite alternate, pulse 5s ease-in-out infinite;
+}
+body::after {
+  right: -25vmax; bottom: -30vmax;
+  background: radial-gradient(circle, rgba(255, 92, 230, .6) 0%, rgba(120, 60, 255, .35) 40%, transparent 70%);
+  animation: drift2 18s ease-in-out infinite alternate, pulse 6s ease-in-out infinite reverse;
+}
+@keyframes drift1 { to { transform: translate(18vmax, 14vmax); } }
+@keyframes drift2 { to { transform: translate(-16vmax, -12vmax); } }
+@keyframes pulse { 0%, 100% { opacity: .75; } 50% { opacity: 1; } }
+header, main { position: relative; z-index: 1; }
+
+header {
+  display: flex; align-items: center; justify-content: space-between;
+  max-width: 760px; width: 100%; margin: 0 auto; padding-block: 20px 8px;
+  color: #fff;
+}
+.logo { font-family: var(--display); font-weight: 700; font-size: 22px; letter-spacing: -0.02em; display: flex; align-items: center; gap: 8px; }
+.logo svg { width: 26px; height: 26px; }
+.back { display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(255,255,255,.35); background: rgba(255,255,255,.12); color: #fff; border-radius: 999px; padding: 7px 14px; font: 700 14px var(--body); cursor: pointer; }
+.back:hover { background: rgba(255,255,255,.22); }
+.back:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
+.hl { display: flex; align-items: center; gap: 14px; }
+.from { font-family: var(--mono); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: #e6dbff; }
+
+main { flex: 1; display: flex; flex-direction: column; justify-content: center; max-width: 760px; width: 100%; margin: 0 auto; padding-block: 12px 28px; min-height: 0; }
+main.active { justify-content: flex-end; }
+
+.chat {
+  background: var(--panel);
+  border-radius: 22px;
+  box-shadow: 0 0 0 1px rgba(200, 160, 255, .5), 0 0 60px 6px rgba(170, 110, 255, .55), 0 30px 80px -20px rgba(20, 0, 50, 0.6);
+  animation: halo 4s ease-in-out infinite;
+  display: flex; flex-direction: column;
+  max-height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+.log { overflow-y: auto; padding: 22px 22px 6px; display: flex; flex-direction: column; gap: 16px; }
+.log:empty { display: none; }
+
+.ask { position: relative; padding: 14px; }
+.ask form { display: flex; gap: 10px; align-items: center; background: #fff; border: 2px solid var(--line); border-radius: 16px; padding: 8px 8px 8px 18px; transition: border-color .2s; }
+.ask form:focus-within { border-color: var(--glow); }
+.ask input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: 500 18px var(--body); color: var(--ink); padding-block: 10px; }
+.ask button { border: 0; border-radius: 12px; background: var(--purple); color: #fff; font: 700 15px var(--body); padding: 12px 18px; cursor: pointer; }
+.ask button:hover { background: var(--purple-deep); }
+.ask button:focus-visible, .chip:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
+
+/* The big prompt that covers the input until it's clicked */
+.prompt {
+  position: absolute; inset: 14px; border-radius: 16px; border: 0;
+  background: #fff; color: var(--ink); cursor: text;
+  font: 700 clamp(28px, 7vw, 44px) var(--display); letter-spacing: -0.02em;
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  transition: opacity .25s, transform .25s;
+}
+.prompt .caret { width: 3px; height: 1em; background: var(--glow); animation: blink 1s steps(1) infinite; }
+.prompt.gone { opacity: 0; transform: scale(.97); pointer-events: none; }
+@keyframes halo { 50% { box-shadow: 0 0 0 1px rgba(220, 180, 255, .7), 0 0 90px 14px rgba(190, 120, 255, .75), 0 30px 80px -20px rgba(20, 0, 50, 0.6); } }
+@keyframes blink { 50% { opacity: 0; } }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 14px 16px; }
+.chip { border: 1px solid var(--line); background: #fff; color: var(--purple); border-radius: 999px; padding: 7px 13px; font: 600 13px var(--body); cursor: pointer; }
+.chip:hover { border-color: var(--glow); }
+
+.msg-user { align-self: flex-end; background: var(--purple); color: #fff; padding: 10px 16px; border-radius: 16px 16px 4px 16px; font-weight: 600; max-width: 80%; }
+.msg-bot { align-self: stretch; display: flex; flex-direction: column; gap: 10px; }
+.msg-bot p { margin: 0; line-height: 1.5; max-width: 62ch; }
+.msg-bot .route { font-family: var(--display); font-weight: 500; font-size: 17px; }
+
+.flight {
+  display: grid; grid-template-columns: 1fr auto; gap: 6px 14px;
+  background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px;
+}
+.flight .times { display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 18px; font-variant-numeric: tabular-nums; }
+.flight .times .dash { flex: 0 1 60px; min-width: 20px; height: 2px; background: var(--line); position: relative; }
+.flight .times .dash::after { content: ""; position: absolute; right: -2px; top: -3px; border-left: 6px solid var(--line); border-top: 4px solid transparent; border-bottom: 4px solid transparent; }
+.flight .price { font-family: var(--display); font-weight: 700; font-size: 20px; color: var(--purple); text-align: right; font-variant-numeric: tabular-nums; }
+.flight .meta { color: var(--muted); font-size: 13px; display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.flight .tag { justify-self: end; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+.tag.direct { background: #e3f7e9; color: #146c35; }
+.tag.stop { background: #fff1d1; color: #7a5200; }
+
+.flight { cursor: pointer; transition: border-color .15s, transform .15s; }
+.flight:hover { border-color: var(--glow); transform: translateY(-1px); }
+.flight:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
+.flight .buy { grid-column: 1 / -1; font-size: 13px; font-weight: 700; color: var(--purple); }
+
+.overlay { position: fixed; inset: 0; background: rgba(20, 0, 50, .6); display: flex; align-items: center; justify-content: center; padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); z-index: 20; }
+.sheet { background: var(--panel); color: var(--ink); border-radius: 20px; width: 100%; max-width: 440px; max-height: 100%; overflow-y: auto; padding: 22px; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 30px 80px -20px rgba(0,0,0,.6); }
+.sheet h2 { margin: 0; font: 700 20px var(--display); letter-spacing: -0.01em; }
+.sheet .sum { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
+.sheet .sum .t { font-family: var(--mono); font-size: 17px; font-variant-numeric: tabular-nums; }
+.sheet .sum .m { color: var(--muted); font-size: 13px; }
+.field { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.field label { font-weight: 600; }
+.field input[type=date] { font: 500 15px var(--body); border: 2px solid var(--line); border-radius: 10px; padding: 8px 10px; color: var(--ink); background: #fff; color-scheme: light; }
+.stepper { display: flex; align-items: center; gap: 10px; }
+.stepper button { width: 36px; height: 36px; border-radius: 10px; border: 2px solid var(--line); background: #fff; color: var(--purple); font: 700 18px var(--body); cursor: pointer; }
+.stepper output { min-width: 2ch; text-align: center; font: 700 17px var(--mono); }
+.total { display: flex; justify-content: space-between; align-items: baseline; border-top: 1px solid var(--line); padding-top: 14px; }
+.total strong { font: 700 26px var(--display); color: var(--purple); font-variant-numeric: tabular-nums; }
+.cta { display: block; text-align: center; text-decoration: none; background: var(--purple); color: #fff; font: 700 16px var(--body); border-radius: 14px; padding: 14px; }
+.cta:hover { background: var(--purple-deep); }
+.close { align-self: center; border: 0; background: none; color: var(--muted); font: 600 14px var(--body); cursor: pointer; padding: 4px 10px; }
+.cta:focus-visible, .close:focus-visible, .stepper button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
+
+.note { font-size: 12px; color: var(--muted); }
+.typing { display: inline-flex; gap: 4px; padding: 8px 0; }
+.typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--glow); animation: bounce 1s infinite; }
+.typing i:nth-child(2) { animation-delay: .15s; } .typing i:nth-child(3) { animation-delay: .3s; }
+@keyframes bounce { 0%, 80%, 100% { transform: translateY(0); opacity: .5 } 40% { transform: translateY(-5px); opacity: 1 } }
+
+.foot { text-align: center; color: #d9ccf5; font-size: 12px; padding-top: 12px; }
+
+@media (max-width: 480px) {
+  .ask button { padding: 12px 14px; }
+  .flight { grid-template-columns: 1fr; }
+  .flight .price, .flight .tag { text-align: left; justify-self: start; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 16l20-8-6 12-3-5-5 3 1-5-7 3z" fill="#ffcf4a"/></svg>
+    flyly
+  </div>
+  <div class="hl"><button class="back" id="back" type="button" hidden>← Назад</button>
+  <div class="from">Од Скопје · SKP</div></div>
+</header>
+
+<main id="main">
+  <div class="chat">
+    <div class="log" id="log" aria-live="polite"></div>
+    <div class="ask">
+      <form id="form" autocomplete="off">
+        <input id="dest" type="text" aria-label="Destination" placeholder="Напиши град, на пр. Виена">
+        <button type="submit">Барај</button>
+      </form>
+      <button class="prompt" id="prompt" type="button" aria-label="Накај идеш? Click to type a destination">Накај идеш?<span class="caret"></span></button>
+    </div>
+    <div class="chips" id="chips"></div>
+  </div>
+  <div class="foot">Sample flight data for the demo. Prices and times are examples, not live fares.</div>
+</main>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="bk-title">
+    <h2 id="bk-title">Купи карта</h2>
+    <div class="sum">
+      <div class="t" id="bk-times"></div>
+      <div class="m" id="bk-meta"></div>
+    </div>
+    <div class="field"><label for="bk-date">Датум</label><input id="bk-date" type="date"></div>
+    <div class="field"><label>Патници</label>
+      <div class="stepper"><button type="button" id="bk-minus" aria-label="Помалку патници">−</button><output id="bk-pax">1</output><button type="button" id="bk-plus" aria-label="Повеќе патници">+</button></div>
+    </div>
+    <div class="total"><span>Вкупно</span><strong id="bk-total"></strong></div>
+    <a class="cta" id="bk-go" href="#" target="_blank" rel="noopener"></a>
+    <div class="note">Плаќањето се прави на сајтот на авиокомпанијата. Цената тука е примерна.</div>
+    <button class="close" type="button" id="bk-close">← Назад</button>
+  </div>
+</div>
+
+<script>
+// Destinations: aliases (Macedonian, English, local), IATA code, and direct routes from SKP
+const CITIES = [
+  { name: "Виена", en: "Vienna", code: "VIE", alias: ["vienna","wien","viena","виена","beč","беч"], dur: 105, direct: [["Austrian Airlines","OS 778",[6,15],189],["Wizz Air","W6 4321",[13,40],49]] },
+  { name: "Истанбул", en: "Istanbul", code: "IST", alias: ["istanbul","istambul","истанбул","carigrad"], dur: 100, direct: [["Turkish Airlines","TK 1004",[4,50],165],["Turkish Airlines","TK 1006",[19,25],148],["Pegasus (SAW)","PC 382",[12,10],79]] },
+  { name: "Лондон", en: "London", code: "LTN", alias: ["london","londen","лондон","luton"], dur: 180, direct: [["Wizz Air","W6 4301",[8,25],69],["Wizz Air","W6 4303",[18,5],89]] },
+  { name: "Базел", en: "Basel", code: "BSL", alias: ["basel","базел","bazel"], dur: 145, direct: [["Wizz Air","W6 4331",[7,0],59],["Wizz Air","W6 4333",[16,45],79]] },
+  { name: "Цирих", en: "Zurich", code: "ZRH", alias: ["zurich","zürich","цирих","cirih"], dur: 140, direct: [["Swiss","LX 1477",[10,30],215]] },
+  { name: "Мемминген", en: "Memmingen (Munich)", code: "FMM", alias: ["memmingen","мемминген","munich","münchen","minhen","минхен"], dur: 125, direct: [["Wizz Air","W6 4341",[9,10],45]] },
+  { name: "Дортмунд", en: "Dortmund", code: "DTM", alias: ["dortmund","дортмунд"], dur: 155, direct: [["Wizz Air","W6 4351",[6,40],55],["Wizz Air","W6 4353",[17,20],65]] },
+  { name: "Малме", en: "Malmö", code: "MMX", alias: ["malmo","malmö","малме","malme"], dur: 170, direct: [["Wizz Air","W6 4381",[11,5],62]] },
+  { name: "Гетеборг", en: "Gothenburg", code: "GOT", alias: ["gothenburg","göteborg","goteborg","гетеборг"], dur: 180, direct: [["Wizz Air","W6 4385",[14,30],58]] },
+  { name: "Ајндховен", en: "Eindhoven", code: "EIN", alias: ["eindhoven","ајндховен","ajndhoven","amsterdam","амстердам"], dur: 165, direct: [["Wizz Air","W6 4361",[7,55],49]] },
+  { name: "Милано", en: "Milan Bergamo", code: "BGY", alias: ["milan","milano","милано","bergamo"], dur: 115, direct: [["Wizz Air","W6 4371",[15,15],39]] },
+  { name: "Рим", en: "Rome", code: "FCO", alias: ["rome","roma","рим","rim"], dur: 100, direct: [["Wizz Air","W6 4375",[12,50],42]] },
+  { name: "Белград", en: "Belgrade", code: "BEG", alias: ["belgrade","beograd","белград","belgrad"], dur: 55, direct: [["Air Serbia","JU 141",[5,45],119],["Air Serbia","JU 145",[15,55],99]] },
+  { name: "Франкфурт", en: "Frankfurt", code: "FRA", alias: ["frankfurt","франкфурт"], dur: 135, direct: [["Lufthansa","LH 1449",[13,0],229]] },
+  { name: "Берлин", en: "Berlin", code: "BER", alias: ["berlin","берлин"], dur: 140, direct: [["Wizz Air","W6 4391",[10,45],52]] },
+  { name: "Париз", en: "Paris Beauvais", code: "BVA", alias: ["paris","париз","pariz","beauvais"], dur: 170, direct: [["Wizz Air","W6 4395",[16,20],74]] },
+  { name: "Барселона", en: "Barcelona", code: "BCN", alias: ["barcelona","барселона"], dur: 165, direct: [["Wizz Air","W6 4397",[9,35],68]] },
+  { name: "Дубаи", en: "Dubai", code: "DWC", alias: ["dubai","дубаи","dubaj"], dur: 285, direct: [["Wizz Air","W6 4501",[22,40],119]] },
+];
+// Hubs used to build one-stop connections to places with no direct flight
+const HUBS = [
+  { name: "Истанбул", code: "IST", airline: "Turkish Airlines", fn: "TK", leg1: 100, dep: [4,50], base: 210 },
+  { name: "Виена", code: "VIE", airline: "Austrian Airlines", fn: "OS", leg1: 105, dep: [6,15], base: 260 },
+  { name: "Белград", code: "BEG", airline: "Air Serbia", fn: "JU", leg1: 55, dep: [5,45], base: 230 },
+];
+
+const $ = id => document.getElementById(id);
+const norm = s => s.toLowerCase().trim().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/ѓ/g,"г").replace(/ќ/g,"к");
+const pad = n => String(n).padStart(2, "0");
+const fmt = (h, m) => pad(((h % 24) + 24) % 24) + ":" + pad(m);
+const addMin = ([h, m], d) => { const t = h * 60 + m + d; return [Math.floor(t / 60), t % 60]; };
+const durTxt = d => Math.floor(d / 60) + "ч " + pad(d % 60) + "м";
+const hash = s => [...s].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+
+function findCity(q) {
+  const n = norm(q);
+  return CITIES.find(c => [c.name, c.en, c.code, ...c.alias].some(a => norm(a) === n))
+      || CITIES.find(c => [c.name, c.en, ...c.alias].some(a => norm(a).startsWith(n) && n.length >= 3));
+}
+
+function flightCard(f) {
+  const el = document.createElement("div");
+  el.className = "flight";
+  const arr = f.arr, next = arr[0] >= 24 ? " +1" : "";
+  el.innerHTML = `
+    <div class="times"><span>${fmt(...f.dep)}</span><span class="dash"></span><span>${fmt(...arr)}${next}</span></div>
+    <div class="price">€${f.price}</div>
+    <div class="meta"><span>${f.airline}</span><span>${f.fn}</span><span>SKP → ${f.code}</span><span>${durTxt(f.dur)}</span></div>
+    <span class="tag ${f.stops ? "stop" : "direct"}">${f.stops ? "1 престој · " + f.via : "Директен"}</span>
+    <span class="buy">Купи карта →</span>`;
+  el.tabIndex = 0;
+  el.setAttribute("role", "button");
+  el.addEventListener("click", () => openBooking(f));
+  el.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openBooking(f); } });
+  return el;
+}
+
+function flightsFor(q) {
+  const city = findCity(q);
+  if (city) {
+    const list = city.direct.map(([airline, fn, dep, price]) => ({ airline, fn, dep, price, dur: city.dur, arr: addMin(dep, city.dur), code: city.code, stops: 0 }));
+    return { label: `${city.name} (${city.en})`, code: city.code, list: list.sort((a, b) => a.price - b.price), direct: true };
+  }
+  // No direct route: build connections via the hubs, stable for the same query
+  const h = hash(norm(q));
+  const code = norm(q).replace(/[^a-zа-ш]/g, "").slice(0, 3).toUpperCase() || "???";
+  const list = HUBS.map((hub, i) => {
+    const layover = 70 + ((h >> (i * 3)) % 6) * 25;
+    const leg2 = 120 + ((h >> (i * 4)) % 9) * 20;
+    const dur = hub.leg1 + layover + leg2;
+    return { airline: hub.airline, fn: hub.fn + " " + (1000 + (h >> i) % 900), dep: hub.dep, arr: addMin(hub.dep, dur), dur, price: hub.base + (h >> (i * 2)) % 140, code, stops: 1, via: hub.code };
+  });
+  return { label: cap(q.trim()), code, list: list.sort((a, b) => a.price - b.price), direct: false };
+}
+
+function search(q) {
+  if (!q.trim()) return;
+  $("main").classList.add("active");
+  $("chips").hidden = true;
+  $("back").hidden = false;
+  const log = $("log");
+  const u = document.createElement("div"); u.className = "msg-user"; u.textContent = q.trim(); log.append(u);
+  const bot = document.createElement("div"); bot.className = "msg-bot";
+  bot.innerHTML = '<span class="typing"><i></i><i></i><i></i></span>';
+  log.append(bot); log.scrollTop = log.scrollHeight;
+  setTimeout(() => {
+    const r = flightsFor(q);
+    bot.innerHTML = "";
+    const head = document.createElement("div"); head.className = "route"; head.textContent = `Скопје → ${r.label}`;
+    const p = document.createElement("p");
+    p.textContent = r.direct
+      ? `Најдов ${r.list.length} ${r.list.length === 1 ? "директен лет" : "директни лета"} од Скопје. Најевтиниот е €${r.list[0].price}.`
+      : `Нема директни летови од Скопје до ${r.label}. Еве ги најдобрите врски со еден престој.`;
+    bot.append(head, p, ...r.list.map(flightCard));
+    const n = document.createElement("div"); n.className = "note"; n.textContent = "Примерни податоци, цени по лице во еден правец.";
+    bot.append(n);
+    log.scrollTop = log.scrollHeight;
+  }, 650);
+}
+
+// Where each airline sells its tickets
+const AIRLINE_SITES = {
+  "Wizz Air": "https://wizzair.com",
+  "Turkish Airlines": "https://www.turkishairlines.com",
+  "Pegasus (SAW)": "https://www.flypgs.com",
+  "Austrian Airlines": "https://www.austrian.com",
+  "Air Serbia": "https://www.airserbia.com",
+  "Swiss": "https://www.swiss.com",
+  "Lufthansa": "https://www.lufthansa.com",
+};
+let booking = null, pax = 1, lastFocus = null;
+
+function renderBooking() {
+  $("bk-pax").textContent = pax;
+  $("bk-total").textContent = "€" + booking.price * pax;
+  $("bk-minus").disabled = pax <= 1;
+  $("bk-plus").disabled = pax >= 9;
+}
+
+function openBooking(f) {
+  booking = f; pax = 1; lastFocus = document.activeElement;
+  const next = f.arr[0] >= 24 ? " +1" : "";
+  $("bk-times").textContent = `SKP ${fmt(...f.dep)} → ${f.code} ${fmt(...f.arr)}${next}`;
+  $("bk-meta").textContent = `${f.airline} · ${f.fn} · ${durTxt(f.dur)} · ${f.stops ? "преку " + f.via : "директен"} · €${f.price} по лице`;
+  const d = new Date(); d.setDate(d.getDate() + 7);
+  $("bk-date").value = d.toISOString().slice(0, 10);
+  $("bk-date").min = new Date().toISOString().slice(0, 10);
+  $("bk-go").href = AIRLINE_SITES[f.airline] || "https://www.google.com/travel/flights";
+  $("bk-go").textContent = `Купи кај ${f.airline.replace(" (SAW)", "")}`;
+  renderBooking();
+  $("overlay").hidden = false;
+  $("bk-go").focus();
+}
+function closeBooking() { $("overlay").hidden = true; lastFocus?.focus(); }
+
+$("bk-minus").addEventListener("click", () => { if (pax > 1) { pax--; renderBooking(); } });
+$("bk-plus").addEventListener("click", () => { if (pax < 9) { pax++; renderBooking(); } });
+$("bk-close").addEventListener("click", closeBooking);
+$("overlay").addEventListener("click", e => { if (e.target === $("overlay")) closeBooking(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("overlay").hidden) closeBooking(); });
+
+$("back").addEventListener("click", () => {
+  $("log").innerHTML = "";
+  $("main").classList.remove("active");
+  $("chips").hidden = false;
+  $("back").hidden = true;
+  $("dest").value = "";
+  $("dest").blur();
+  $("prompt").classList.remove("gone");
+  $("prompt").focus();
+});
+
+$("prompt").addEventListener("click", () => { $("prompt").classList.add("gone"); $("dest").focus(); });
+$("dest").addEventListener("focus", () => $("prompt").classList.add("gone"));
+$("form").addEventListener("submit", e => { e.preventDefault(); const v = $("dest").value; $("dest").value = ""; search(v); });
+
+["Виена", "Истанбул", "Лондон", "Базел", "Рим", "Дубаи"].forEach(c => {
+  const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.textContent = c;
+  b.addEventListener("click", () => { $("prompt").classList.add("gone"); search(c); });
+  $("chips").append(b);
+});
+</script>
+</body>
+</html>
